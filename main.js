@@ -10,7 +10,8 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 const COLORS = {
     background: 0x1a1a2e,
     letter: 0xFFDE21,    // Yellow
-    number: 0x0021DE,    // Complementary blue
+    //number: 0x0021DE,    // Complementary blue
+    number : 0x04BADE,   // Alternative blue for better visibility
     light: 0xffffff      // White
 };
 
