@@ -13,6 +13,9 @@ document.body.appendChild(renderer.domElement);
 const letterColor = 0xFFDE21;  // Yellow
 const numberColor = 0x0021DE;  // Complementary blue
 
+// Create references for the cubes
+let innerCube, outerCube;
+
 // Load font and create text
 const fontLoader = new FontLoader();
 fontLoader.load(
@@ -24,7 +27,7 @@ fontLoader.load(
             size: 1,
             height: 0.2
         });
-        const letterMaterial = new THREE.MeshBasicMaterial({ color: letterColor });
+        const letterMaterial = new THREE.MeshPhongMaterial({ color: letterColor });
         const letterMesh = new THREE.Mesh(letterGeometry, letterMaterial);
         letterMesh.position.x = -2;
         scene.add(letterMesh);
@@ -35,55 +38,59 @@ fontLoader.load(
             size: 1,
             height: 0.2
         });
-        const numberMaterial = new THREE.MeshBasicMaterial({ color: numberColor });
+        const numberMaterial = new THREE.MeshPhongMaterial({ color: numberColor });
         const numberMesh = new THREE.Mesh(numberGeometry, numberMaterial);
         numberMesh.position.x = 2;
         scene.add(numberMesh);
 
-        // Central glowing cube
-        const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-        const cubeMaterial = new THREE.ShaderMaterial({
-            uniforms: {
-                glowColor: { type: 'c', value: new THREE.Color(0xffffff) },
-                viewVector: { type: 'v3', value: camera.position }
-            },
-            vertexShader: `
-                varying vec3 vNormal;
-                varying vec3 vPositionNormal;
-                void main() {
-                    vNormal = normalize(normalMatrix * normal);
-                    vPositionNormal = normalize((modelViewMatrix * vec4(position, 1.0)).xyz);
-                    gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0);
-                }
-            `,
-            fragmentShader: `
-                uniform vec3 glowColor;
-                uniform vec3 viewVector;
-                varying vec3 vNormal;
-                varying vec3 vPositionNormal;
-                void main() {
-                    float intensity = pow(0.5 - dot(vNormal, vPositionNormal), 2.0);
-                    gl_FragColor = vec4(glowColor * intensity, 1.0);
-                }
-            `,
-            side: THREE.FrontSide,
-            blending: THREE.AdditiveBlending,
-            transparent: true
-        });
-        const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-        scene.add(cube);
+        // Create glowing cube
+        const cubeGeometry = new THREE.BoxGeometry(0.3, 0.3, 0.3);
+        
+        // Inner cube (bright)
+        const innerCubeMaterial = new THREE.MeshBasicMaterial({ color: 0xffffff });
+        innerCube = new THREE.Mesh(cubeGeometry, innerCubeMaterial);
+        scene.add(innerCube);
 
-        // Point light
-        const pointLight = new THREE.PointLight(0xffffff, 5, 100);
-        pointLight.position.set(0, 0, 0);
-        scene.add(pointLight);
+        // Outer cube (glow effect)
+        const outerGeometry = new THREE.BoxGeometry(0.4, 0.4, 0.4);
+        const outerMaterial = new THREE.MeshBasicMaterial({ 
+            color: 0xffffff,
+            transparent: true,
+            opacity: 0.5,
+            blending: THREE.AdditiveBlending
+        });
+        outerCube = new THREE.Mesh(outerGeometry, outerMaterial);
+        scene.add(outerCube);
+
+        // Add point light at cube position
+        const light = new THREE.PointLight(0xffffff, 20, 10);
+        light.position.set(0, 0, 0);
+        scene.add(light);
     }
 );
 
+// Position camera
 camera.position.z = 5;
 
+// Animation loop
 function animate() {
     requestAnimationFrame(animate);
+    
+    // Rotate both cubes if they exist
+    if (innerCube && outerCube) {
+        innerCube.rotation.x += 0.01;
+        innerCube.rotation.y += 0.01;
+        outerCube.rotation.x += 0.01;
+        outerCube.rotation.y += 0.01;
+    }
+    
     renderer.render(scene, camera);
 }
 animate();
+
+// Handle window resize
+window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+});
