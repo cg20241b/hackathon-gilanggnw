@@ -1,6 +1,10 @@
 import * as THREE from 'three';
 import { TextGeometry } from 'three/addons/geometries/TextGeometry.js';
 import { FontLoader } from 'three/addons/loaders/FontLoader.js';
+import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
+import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
+import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
+import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 
 // Constants and Configurations
 const COLORS = {
@@ -12,7 +16,7 @@ const COLORS = {
 
 const SETTINGS = {
     moveSpeed: 0.1,
-    lightIntensity: 100,
+    lightIntensity: 10,
     lightRange: 200
 };
 
@@ -90,6 +94,9 @@ const fragmentShaderMetal = `
     }
 `;
 
+// Composer
+let composer;
+
 // Scene Objects
 let innerCube, outerCube;
 let stars;
@@ -97,9 +104,31 @@ let stars;
 // Initialize Scene
 function initScene() {
     scene.background = new THREE.Color(COLORS.background);
+    renderer.setPixelRatio(window.devicePixelRatio);
     renderer.setSize(window.innerWidth, window.innerHeight);
     document.body.appendChild(renderer.domElement);
     camera.position.z = 5;
+}
+
+function initPostProcessing() {
+    composer = new EffectComposer(renderer);
+    
+    // Regular scene render
+    const renderPass = new RenderPass(scene, camera);
+    composer.addPass(renderPass);
+    
+    // Bloom effect
+    const bloomPass = new UnrealBloomPass(
+        new THREE.Vector2(window.innerWidth, window.innerHeight),
+        0.7,    // bloom strength
+        0.2,    // radius
+        0.8    // threshold
+    );
+    composer.addPass(bloomPass);
+    
+    // Output pass with tone mapping
+    const outputPass = new OutputPass();
+    composer.addPass(outputPass);
 }
 
 // Create Stars
@@ -126,6 +155,10 @@ function addStars() {
     scene.add(stars);
 }
 
+// Tone Mapping
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.9 ;
+
 // Create Text and Cubes
 function createObjects(font) {
     // Materials
@@ -136,7 +169,8 @@ function createObjects(font) {
             lightIntensity: { value: SETTINGS.lightIntensity }
         },
         vertexShader,
-        fragmentShader: fragmentShaderPlastic
+        fragmentShader: fragmentShaderPlastic,
+        side: THREE.DoubleSide
     });
 
     const numberMaterial = new THREE.ShaderMaterial({
@@ -146,7 +180,8 @@ function createObjects(font) {
             lightIntensity: { value: SETTINGS.lightIntensity }
         },
         vertexShader,
-        fragmentShader: fragmentShaderMetal
+        fragmentShader: fragmentShaderMetal,
+        side: THREE.DoubleSide
     });
 
     // Create Text
@@ -204,7 +239,7 @@ function createObjects(font) {
 function animate() {
     requestAnimationFrame(animate);
     
-    if (stars.material instanceof THREE.PointsMaterial) {
+    if (stars?.material instanceof THREE.PointsMaterial) {
         stars.material.opacity = 0.5 + 0.5 * Math.sin(Date.now() * 0.001);
     }
 
@@ -221,15 +256,24 @@ function animate() {
         });
     }
     
-    renderer.render(scene, camera);
+    if (composer) {
+        composer.render();
+    } else {
+        renderer.render(scene, camera);
+    }
 }
 
 // Event Listeners
 function initEventListeners() {
     window.addEventListener('resize', () => {
-        camera.aspect = window.innerWidth / window.innerHeight;
+        const width = window.innerWidth;
+        const height = window.innerHeight;
+        
+        camera.aspect = width / height;
         camera.updateProjectionMatrix();
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        
+        renderer.setSize(width, height);
+        composer.setSize(width, height);
     });
 
     window.addEventListener('keydown', (event) => {
@@ -258,6 +302,7 @@ function initEventListeners() {
 
 // Initialize
 initScene();
+initPostProcessing();
 addStars();
 
 // Load Font and Start
