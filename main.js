@@ -235,3 +235,32 @@ window.addEventListener('resize', () => {
     camera.updateProjectionMatrix();
     renderer.setSize(window.innerWidth, window.innerHeight);
 });
+
+// Keyboard controls
+const moveSpeed = 0.1; // Adjust speed as needed
+
+window.addEventListener('keydown', (event) => {
+    switch(event.key.toLowerCase()) {
+        // Cube vertical movement
+        case 'w':
+            if (innerCube && outerCube) {
+                innerCube.position.y += moveSpeed;
+                outerCube.position.y += moveSpeed;
+            }
+            break;
+        case 's':
+            if (innerCube && outerCube) {
+                innerCube.position.y -= moveSpeed;
+                outerCube.position.y -= moveSpeed;
+            }
+            break;
+            
+        // Camera horizontal movement
+        case 'a':
+            camera.position.x -= moveSpeed;
+            break;
+        case 'd':
+            camera.position.x += moveSpeed;
+            break;
+    }
+});
